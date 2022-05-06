@@ -6,6 +6,7 @@ import (
     "os"
     "log"
     "strconv"
+    "os/exec"
 )
 
 type commandStruct struct {
@@ -15,6 +16,17 @@ type commandStruct struct {
     stdoutPipe bool
 }
 
+func executeCommand(command string) bool {
+    tokens := strings.Split(command, " ")
+    cmd := exec.Command(tokens[0], tokens[1:]...)
+    out, err := cmd.Output()
+
+    fmt.Print(string(out))
+    if (err != nil) {
+        log.Println(err)
+    }
+    return err == nil
+}
 //func executePipeline()
 
 func commandHandler (command string) (bool, bool) {
@@ -28,12 +40,15 @@ func commandHandler (command string) (bool, bool) {
     commandTokens := strings.Split(actualCommand,  " ")
     if commandTokens[0] == "exit" {
         return true, true;
+
     } else if commandTokens[0] == "" {
         return false, true;
+
     } else if commandTokens[0] == "history" {
         HistAdd(command)
         HistPrint()
         return false, true
+
     } else if commandTokens[0] == "cd" {
         if tilda := strings.Index(commandTokens[1], "~"); tilda != -1 {
             home, _ := os.UserHomeDir()
@@ -45,6 +60,7 @@ func commandHandler (command string) (bool, bool) {
         }
         HistAdd(command)
         return false, err == nil
+
     } else if commandTokens[0][0] == '!' {
         num, err := strconv.Atoi(commandTokens[0][1:])
         var result string
@@ -53,38 +69,37 @@ func commandHandler (command string) (bool, bool) {
         if err != nil {
             if commandTokens[0][1] == '!' {
                 result, _ = HistSearchCnum(HistLastCnum())
-            //    commandHandler(result)
             } else {
                 result, isFound = HistSearchPrefix(commandTokens[0][1:])
                 if !isFound {
                     return false, false
                 }
             }
+
         } else {
             result, isFound = HistSearchCnum(num)
             if !isFound {
                 return false, false
             }
-        }
 
+        }
 //        log.Println(result)
         return commandHandler(result)
 
-//        return false, true
     }else {
         HistAdd(command)
-        return false, true
+
+        return false, executeCommand(command)
     }
 
 }
 
 func main() {
     Init()
-    fmt.Println("Hello shell")
+//    fmt.Println("Hello shell")
     for {
 
         command, end := ReadCommand()
- //       fmt.Println(command)
         e, s := commandHandler(command)
         Status = s
         if e || end {
